@@ -5,7 +5,7 @@ services:
     plan: free
     region: oregon
     rootDir: .
-    buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm --filter @workspace/hotspot-portal run build && pnpm --filter @workspace/api-server run build
+    buildCommand: npx --yes pnpm@latest install --frozen-lockfile && npx pnpm --filter @workspace/hotspot-portal run build && npx pnpm --filter @workspace/api-server run build
     startCommand: node artifacts/api-server/dist/index.mjs
     envVars:
       - key: NODE_ENV
