@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: safnet
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: .
+    buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm --filter @workspace/hotspot-portal run build && pnpm --filter @workspace/api-server run build
+    startCommand: node artifacts/api-server/dist/index.mjs
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: safnet-db
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: PAYHERO_API_KEY
+        sync: false
+      - key: PAYHERO_CALLBACK_SECRET
+        sync: false
+      - key: RENDER_EXTERNAL_URL
+        fromService:
+          name: safnet
+          type: web
+          property: renderUrl
+
+databases:
+  - name: safnet-db
+    plan: free
+    databaseName: safnet

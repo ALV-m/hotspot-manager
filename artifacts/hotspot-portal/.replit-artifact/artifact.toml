@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Hotspot Portal"
+version = "1.0.0"
+id = "artifacts/hotspot-portal"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23526
+
+[services.development]
+run = "pnpm --filter @workspace/hotspot-portal run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/hotspot-portal", "run", "build" ]
+publicDir = "artifacts/hotspot-portal/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23526"
+BASE_PATH = "/"

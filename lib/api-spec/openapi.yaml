@@ -1,0 +1,544 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: Hotspot captive portal API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: packages
+    description: Data packages
+  - name: sessions
+    description: User sessions / vouchers
+  - name: payments
+    description: Payment operations
+  - name: visitors
+    description: Live portal visitors
+paths:
+  /visitors:
+    get:
+      operationId: listVisitors
+      tags: [visitors]
+      summary: List currently active portal visitors (admin)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Visitor"
+
+  /visitors/ping:
+    post:
+      operationId: pingVisitor
+      tags: [visitors]
+      summary: Register or refresh a portal visitor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VisitorPingInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /packages:
+    get:
+      operationId: listPackages
+      tags: [packages]
+      summary: List all packages
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Package"
+    post:
+      operationId: createPackage
+      tags: [packages]
+      summary: Create a package (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PackageInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Package"
+
+  /packages/{id}:
+    get:
+      operationId: getPackage
+      tags: [packages]
+      summary: Get a single package
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Package"
+    put:
+      operationId: updatePackage
+      tags: [packages]
+      summary: Update a package (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PackageInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Package"
+    delete:
+      operationId: deletePackage
+      tags: [packages]
+      summary: Delete a package (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /sessions:
+    get:
+      operationId: listSessions
+      tags: [sessions]
+      summary: List all user sessions (admin)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Session"
+    post:
+      operationId: createSession
+      tags: [sessions]
+      summary: Create a session (user buys a package)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SessionInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+
+  /sessions/{id}:
+    get:
+      operationId: getSession
+      tags: [sessions]
+      summary: Get a session by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+
+  /sessions/phone-login:
+    post:
+      operationId: phoneLogin
+      tags: [sessions]
+      summary: Login with phone number — claims an existing paid session slot and assigns client IP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PhoneLoginInput"
+      responses:
+        "200":
+          description: Session found — IP assigned, internet will be unblocked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "404":
+          description: No active plan found for this phone number
+
+  /sessions/{id}/disconnect:
+    post:
+      operationId: disconnectSession
+      tags: [sessions]
+      summary: Disconnect a user (admin — marks session as expired)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+
+  /sessions/stats:
+    get:
+      operationId: getSessionStats
+      tags: [sessions]
+      summary: Get session statistics (admin dashboard)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionStats"
+
+  /sessions/paid-ips:
+    get:
+      operationId: getPaidIps
+      tags: [sessions]
+      summary: Get IPs of all currently paid and active sessions (for firewall unblocking)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PaidIpEntry"
+
+  /payments/initiate:
+    post:
+      operationId: initiatePayment
+      tags: [payments]
+      summary: Initiate STK Push via PayHero
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentInitiate"
+      responses:
+        "200":
+          description: STK push sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentResponse"
+
+  /payments/callback:
+    post:
+      operationId: paymentCallback
+      tags: [payments]
+      summary: PayHero payment webhook callback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentCallbackInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /payments/status/{reference}:
+    get:
+      operationId: getPaymentStatus
+      tags: [payments]
+      summary: Poll payment status
+      parameters:
+        - name: reference
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentStatusResult"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    Package:
+      type: object
+      required: [id, name, durationHours, price, dataLimitMb]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        durationHours:
+          type: integer
+          description: Duration in hours
+        dataLimitMb:
+          type: integer
+          description: Data limit in MB (0 = unlimited)
+        price:
+          type: number
+          description: Price in KES
+        description:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+
+    PackageInput:
+      type: object
+      required: [name, durationHours, price, dataLimitMb]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        durationHours:
+          type: integer
+          minimum: 1
+        dataLimitMb:
+          type: integer
+          minimum: 0
+        price:
+          type: number
+          minimum: 1
+        description:
+          type: string
+        isActive:
+          type: boolean
+
+    Session:
+      type: object
+      required: [id, phone, packageId, status, createdAt]
+      properties:
+        id:
+          type: integer
+        phone:
+          type: string
+        packageId:
+          type: integer
+        packageName:
+          type: ["string", "null"]
+        packagePrice:
+          type: ["number", "null"]
+        status:
+          type: string
+          enum: [pending, paid, expired]
+        paymentReference:
+          type: ["string", "null"]
+        ipAddress:
+          type: ["string", "null"]
+        expiresAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    SessionInput:
+      type: object
+      required: [phone, packageId]
+      properties:
+        phone:
+          type: string
+          minLength: 9
+        packageId:
+          type: integer
+        ipAddress:
+          type: string
+        adminCreated:
+          type: boolean
+          description: If true, session is immediately marked as paid (admin bypass)
+        numDevices:
+          type: integer
+          minimum: 1
+          maximum: 20
+          description: Number of device slots to create (admin only — creates numDevices paid sessions)
+
+    PhoneLoginInput:
+      type: object
+      required: [phone, ipAddress]
+      properties:
+        phone:
+          type: string
+          minLength: 9
+        ipAddress:
+          type: string
+
+    SessionStats:
+      type: object
+      required: [total, paid, pending, expired, revenue]
+      properties:
+        total:
+          type: integer
+        paid:
+          type: integer
+        pending:
+          type: integer
+        expired:
+          type: integer
+        revenue:
+          type: number
+
+    PaidIpEntry:
+      type: object
+      required: [sessionId, ipAddress, expiresAt]
+      properties:
+        sessionId:
+          type: integer
+        ipAddress:
+          type: string
+        phone:
+          type: string
+        expiresAt:
+          type: string
+
+    PaymentInitiate:
+      type: object
+      required: [sessionId, phone, amount]
+      properties:
+        sessionId:
+          type: integer
+        phone:
+          type: string
+        amount:
+          type: number
+
+    PaymentResponse:
+      type: object
+      required: [success, message]
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        reference:
+          type: ["string", "null"]
+
+    PaymentCallbackInput:
+      type: object
+      properties:
+        status:
+          type: string
+        reference:
+          type: string
+        phone:
+          type: string
+        amount:
+          type: number
+
+    PaymentStatusResult:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [pending, paid, failed]
+        sessionId:
+          type: ["integer", "null"]
+
+    Visitor:
+      type: object
+      required: [ipAddress, userAgent, deviceType, os, browser, firstSeenAt, lastSeenAt]
+      properties:
+        ipAddress:
+          type: string
+        userAgent:
+          type: string
+        deviceType:
+          type: string
+          enum: [mobile, tablet, desktop]
+        os:
+          type: string
+        browser:
+          type: string
+        firstSeenAt:
+          type: string
+        lastSeenAt:
+          type: string
+
+    VisitorPingInput:
+      type: object
+      required: [ipAddress]
+      properties:
+        ipAddress:
+          type: string
+        userAgent:
+          type: string
